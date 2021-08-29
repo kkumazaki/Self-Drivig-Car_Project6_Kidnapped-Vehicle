@@ -58,14 +58,15 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
     particles.push_back(p); 
   }
 
-  //double test_x = particles[0].x;
-  //double test_y = particles[0].y;
-  //double test_theta = particles[0].theta;
-  //double test_wight = particles[0].weight;
 
   //(3)Initialize only once.
   is_initialized = true;
 
+  //(4)Debug during Simulation
+  std::cout << "Initialization data of particles[0]"  << std::endl;
+  std::cout << "x:" << particles[0].x << std::endl;
+  std::cout << "y:" << particles[0].y << std::endl;
+  std::cout << "theta:" << particles[0].theta << std::endl;
 }
 
 void ParticleFilter::prediction(double delta_t, double std_pos[], 
@@ -84,8 +85,8 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
 
   for (int i = 0; i < num_particles; i++) {
     if(fabs(yaw_rate)> 0.001){
-      particles[i].x += velocity/yaw_rate * (sin(particles[i].theta + yaw_rate*delta_t)- sin(particles[i].theta));
-      particles[i].y += velocity/yaw_rate * (cos(particles[i].theta) - cos(particles[i].theta + yaw_rate*delta_t));
+      particles[i].x += (velocity/yaw_rate) * (sin(particles[i].theta + yaw_rate*delta_t)- sin(particles[i].theta));
+      particles[i].y += (velocity/yaw_rate) * (cos(particles[i].theta) - cos(particles[i].theta + yaw_rate*delta_t));
       particles[i].theta += yaw_rate * delta_t;
     }
     else{
@@ -104,6 +105,11 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
     particles[i].y += dist_y(gen); //random y position of particles
     particles[i].theta += dist_theta(gen); //random theta of particles
   }
+  //(2)Debug during Simulation
+  std::cout << "Prediction data of particles[0]"  << std::endl;
+  std::cout << "x:" << particles[0].x << std::endl;
+  std::cout << "y:" << particles[0].y << std::endl;
+  std::cout << "theta:" << particles[0].theta << std::endl;
 }
 
 void ParticleFilter::dataAssociation(vector<LandmarkObs> predicted, 
@@ -124,7 +130,6 @@ void ParticleFilter::dataAssociation(vector<LandmarkObs> predicted,
       int map_id = -1;
       for (unsigned int j = 0; j < predicted.size(); j++){
         double dist_current = dist(observations[i].x, observations[i].y, predicted[j].x, predicted[j].y);
-
         if (min_dist > dist_current){
           min_dist = dist_current;
           map_id = predicted[j].id;
@@ -167,8 +172,8 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
     //(2)Transfer from vehicle coordinate to map coordinate   
     vector<LandmarkObs> transformed_Obs;
     for(unsigned int k = 0; k < observations.size(); k++){
-      double xm = cos(particles[k].theta)*observations[k].x - sin(particles[k].theta)*observations[k].y + particles[k].x;
-      double ym = sin(particles[k].theta)*observations[k].x + cos(particles[k].theta)*observations[k].y + particles[k].y;
+      double xm = cos(particles[i].theta)*observations[k].x - sin(particles[i].theta)*observations[k].y + particles[i].x;
+      double ym = sin(particles[i].theta)*observations[k].x + cos(particles[i].theta)*observations[k].y + particles[i].y;
       transformed_Obs.push_back(LandmarkObs{observations[k].id, xm, ym});
     }
     //(3)Match subset of landmarks
@@ -176,18 +181,31 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 
     //(4)Calculate weights
 		particles[i].weight = 1.0;
-    
+
     for (unsigned int l = 0; l < transformed_Obs.size(); l++){
       int index = 0;
       while(transformed_Obs[l].id != predicted[index].id){
         index++;
       }
-      particles[i].weight *= 1./(2.*M_PI*std_landmark[0]*std_landmark[1])
-                            *exp(-1.*(pow(transformed_Obs[l].x-predicted[index].x,2)/(2*std_landmark[0]*std_landmark[0])
-                            + (pow(transformed_Obs[l].y-predicted[index].y,2)/(2*std_landmark[1]*std_landmark[1]))));
+      double gauss_norm;
+      gauss_norm = 1 / (2 * M_PI * std_landmark[0] * std_landmark[1]);
+      double exponent;
+      exponent = (pow(transformed_Obs[l].x - predicted[index].x, 2) / (2 * pow(std_landmark[0], 2)))
+        + (pow(transformed_Obs[l].y - predicted[index].y, 2) / (2 * pow(std_landmark[1], 2)));
+      particles[i].weight *=  gauss_norm * exp(-exponent);
+
+      //particles[i].weight *= 1./(2.*M_PI*std_landmark[0]*std_landmark[1])
+      //                     *exp(-1.*(pow(transformed_Obs[l].x-predicted[index].x,2)/(2*std_landmark[0]*std_landmark[0])
+      //                      + (pow(transformed_Obs[l].y-predicted[index].y,2)/(2*std_landmark[1]*std_landmark[1]))));
     }
 
   }
+  //(5)Debug during Simulation
+  std::cout << "Updated data of particle[0]"  << std::endl;
+  std::cout << "x:" << particles[0].x << std::endl;
+  std::cout << "y:" << particles[0].y << std::endl;
+  std::cout << "theta:" << particles[0].theta << std::endl; 
+  std::cout << "weight:" << particles[0].weight << std::endl; 
 
 }
 
@@ -212,7 +230,12 @@ void ParticleFilter::resample() {
 		new_particles.push_back(particles[dst2(gen)]);
 	}
 	particles = new_particles;
-
+  //(3)Debug during Simulation
+  std::cout << "Resampled data of particle[0]"  << std::endl;
+  std::cout << "x:" << particles[0].x << std::endl;
+  std::cout << "y:" << particles[0].y << std::endl;
+  std::cout << "theta:" << particles[0].theta << std::endl; 
+  std::cout << "weight:" << particles[0].weight << std::endl; 
 }
 
 void ParticleFilter::SetAssociations(Particle& particle, 
